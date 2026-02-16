@@ -18,11 +18,11 @@ class Q1:
         # Uniform cost search to from 1 to 50.
         # Task 1 says to ignore the energy constraint.
         # So we go by distance (Original problem)
-        # (Distance, Path)[]
         goal = '50'
         parents = {}
         explored = set()
         best_dist = {}
+        # (Distance, Path)[]
         queue = [(0, '1')]
         heapq.heapify(queue)
         while len(queue) > 0:
@@ -35,7 +35,8 @@ class Q1:
                     node = parents[node]
                 path.append(node)
                 path.reverse()
-                print(f"Shortest distance from 1 to 50: {dist} {path}")
+                print(f'Shortest Path: {"->".join(path)}')
+                print(f'Shortest Distance: {dist}')
                 return
             if node in explored:
                 continue
@@ -53,10 +54,8 @@ class Q1:
     
     def task_2(self):
         # Uniform cost search to from 1 to 50, with energy constraint.
-        # (Distance, (Node, Remaining Energy))[]
         # Just like task 1, we prioritise distance. Energy constraint is a 
         # budget, not the main optimization.
-        # Reuse UCS from Task 1, we reject any solutions that exceed the energy constraint.
         START_ENERGY = 287932
         start = "1"
         goal = '50'
@@ -68,6 +67,7 @@ class Q1:
         distance_and_energy = {
             start: [(0, START_ENERGY)] 
         }
+        # (Distance, (Node, Remaining Energy))[]
         queue = [(0, ('1', START_ENERGY))]
         heapq.heapify(queue)
         while len(queue) > 0:
@@ -84,7 +84,9 @@ class Q1:
                     path.append(node)
                     cur_key = parent_key
                 path.reverse()
-                print(f"Shortest distance from 1 to 50: {dist} {path} with remaining energy, {remaining_energy}")
+                print(f'Shortest Path: {"->".join(path)}')
+                print(f'Shortest Distance: {dist}')
+                print(f'Total Energy Cost: {START_ENERGY - remaining_energy}')
                 return
             for neighbor in self.G[node]:
                 edge_key = f"{min(node, neighbor)},{max(node, neighbor)}"
