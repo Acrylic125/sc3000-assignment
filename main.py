@@ -189,8 +189,93 @@ class Q1:
                 f_score_and_energy[neighbor] = f_score_and_energy.get(neighbor, []) + [(updated_f_score, updated_energy)]
                 heapq.heappush(queue, (updated_f_score, (neighbor, updated_dist, updated_energy)))
 
+
+CELL_EMPTY = 0
+CELL_START = 1
+CELL_GOAL = 2
+CELL_BLOCK = 3
+
+ACTION_UP = (1, 0, "|")
+ACTION_LEFT = (0, -1, "<")
+ACTION_RIGHT = (0, 1, ">")
+
+class Q2:
+    def __init__(self):
+        self.grid = [
+            [CELL_START, CELL_EMPTY, CELL_EMPTY, CELL_EMPTY, CELL_EMPTY],
+            [CELL_EMPTY, CELL_EMPTY, CELL_EMPTY, CELL_EMPTY, CELL_EMPTY],
+            [CELL_EMPTY, CELL_BLOCK, CELL_EMPTY, CELL_BLOCK, CELL_EMPTY],
+            [CELL_EMPTY, CELL_EMPTY, CELL_EMPTY, CELL_EMPTY, CELL_EMPTY],
+            [CELL_EMPTY, CELL_EMPTY, CELL_EMPTY, CELL_EMPTY, CELL_GOAL],
+        ]
+
+    def task_1_value_iteration(self):
+        rows = len(self.grid)
+        cols = len(self.grid[0]) 
+        
+        actions = [ACTION_UP, ACTION_LEFT, ACTION_RIGHT]
+        
+        intended_action_prob = 0.8
+        iterations = 100
+        discounted_rate = 0.9
+
+        stop_mean_change = 0.01
+
+        V_old = [[0 for _ in range(cols)] for _ in range(rows)]
+        policy_old = [[None for _ in range(cols)] for _ in range(rows)]
+        for iteration in range(iterations):
+            V_new = [[0 for _ in range(cols)] for _ in range(rows)]
+            policy_new = [[None for _ in range(cols)] for _ in range(rows)]
+            
+            sum_of_change = 0
+            for row in range(rows):
+                for col in range(cols):
+                    best_Q_sa_and_action = None
+                    for dx, dy, symbol in actions:
+                        new_row, new_col = row + dx, col + dy
+                        if new_row < 0 or new_row >= rows or new_col < 0 or new_col >= cols:
+                            continue
+
+                        reward = -10000 # Dont move
+                        if self.grid[new_row][new_col] == CELL_EMPTY: 
+                            reward = -1
+                        if self.grid[new_row][new_col] == CELL_GOAL: 
+                            reward = 10
+
+                        Q_sa = intended_action_prob * reward + discounted_rate * V_old[new_row][new_col]
+                        if best_Q_sa_and_action == None or Q_sa > best_Q_sa_and_action[0]:
+                            best_Q_sa_and_action = (Q_sa, symbol)
+
+                    if best_Q_sa_and_action != None:
+                        Q_sa, action = best_Q_sa_and_action
+                        V_new[row][col] = Q_sa
+                        policy_new[row][col] = action
+                        sum_of_change += abs(V_new[row][col] - V_old[row][col])
+                    else:
+                        policy_new[row][col] = ' '
+
+            V_old = V_new
+            policy_old = policy_new
+            if sum_of_change / (rows * cols) < stop_mean_change:
+                print(f'Converged after {iteration} iterations.')
+                break
+
+        # Show V and Policy
+        for row in range(rows):
+            for col in range(cols):
+                print(f'{V_old[row][col]:.2f}', end=' ')
+            print()
+
+        for row in range(rows):
+            for col in range(cols):
+                print(f'{policy_old[row][col]}', end=' ')
+            print()
+
 if __name__ == '__main__':
     q1 = Q1()
     q1.task_1()
     q1.task_2()
     q1.task_3()
+
+    q2 = Q2()
+    q2.task_1_value_iteration()
