@@ -114,8 +114,83 @@ class Q1:
                 distance_and_energy[neighbor] = distance_and_energy.get(neighbor, []) + [(updated_dist, updated_energy)]
                 heapq.heappush(queue, (updated_dist, (neighbor, updated_energy)))
 
+    def task_3(self):
+        # f(node) = g(node) + h(node)
+        # Generally, a shorter path to our end goal uses less energy.
+        # Let g(node) = current distance of node.
+        # Let h(node) = distance(node, goal)
+        # Note: We dont have to sqrt the distance.
+
+        START_ENERGY = 287932
+        start = "1"
+        goal = '50'
+        
+        def h(node):
+            node_coords = self.coord[node]
+            goal_coords = self.coord[goal]
+            return ((node_coords[0] - goal_coords[0]) ** 2 + (node_coords[1] - goal_coords[1]) ** 2)
+
+        def f(node, dist):
+            return dist + h(node)
+
+        # There may be multiple possible paths to node due to energy.
+        # f'{node},{energy}' -> (parent_node, parent_energy)
+        parents = {}
+        # We will use f_score_and_energy as a way to prune redundant paths.
+        # node -> (f_score, best_energy)[]
+        f_score_and_energy = {
+            start: [(0, START_ENERGY)] 
+        }
+        # (F Score, (Node, Accumulated Distance, Remaining Energy))[]
+        queue = [(f(start, 0), ('1', 0, START_ENERGY))]
+        heapq.heapify(queue)
+        while len(queue) > 0:
+            f_score, entry = heapq.heappop(queue)
+            node, dist, remaining_energy = entry
+            if node == goal:
+                # Reconstruct path 
+                path = []
+                cur_key = f"{node},{remaining_energy}"
+                path.append(node)
+                while cur_key in parents:
+                    node, energy = parents[cur_key]
+                    parent_key = f"{node},{energy}"
+                    path.append(node)
+                    cur_key = parent_key
+                path.reverse()
+                print(f'Shortest Path: {"->".join(path)}')
+                print(f'Shortest Distance: {dist}')
+                print(f'Total Energy Cost: {START_ENERGY - remaining_energy}')
+                return
+            for neighbor in self.G[node]:
+                edge_key = f"{min(node, neighbor)},{max(node, neighbor)}"
+                dist_neighbor = self.dist[edge_key]
+                updated_dist = dist + dist_neighbor
+                updated_f_score = f(neighbor, updated_dist)
+                updated_energy = remaining_energy - self.cost[edge_key]
+
+                # Don't bother, we are already exhausted.
+                if updated_energy < 0:
+                    continue
+
+                should_ignore = False 
+                for best_f_score, best_energy in f_score_and_energy.get(neighbor, []):
+                    # Shorter distance means theres still a possibility that this path is better, even if it has less energy. So we keep it.
+                    # Larger energy means it is less exhausted, so it is possible that we have to resort to it later. So we keep it.
+                    if best_f_score <= updated_f_score and best_energy >= updated_energy:
+                        should_ignore = True
+                        break
+                if should_ignore:
+                    continue
+
+                neighbour_energy_key = f"{neighbor},{updated_energy}"
+                # We need this to recover the path later.
+                parents[neighbour_energy_key] = (node, remaining_energy)
+                f_score_and_energy[neighbor] = f_score_and_energy.get(neighbor, []) + [(updated_f_score, updated_energy)]
+                heapq.heappush(queue, (updated_f_score, (neighbor, updated_dist, updated_energy)))
 
 if __name__ == '__main__':
     q1 = Q1()
     q1.task_1()
     q1.task_2()
+    q1.task_3()
