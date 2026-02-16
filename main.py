@@ -1,8 +1,6 @@
 import json
 import heapq
 
-
-
 class Q1:
     def __init__(self):
         with open('Coord.json', 'r') as f:
@@ -242,7 +240,7 @@ class Q2:
                         if self.grid[new_row][new_col] == CELL_GOAL: 
                             reward = 10
 
-                        Q_sa = intended_action_prob * reward + discounted_rate * V_old[new_row][new_col]
+                        Q_sa = intended_action_prob * (reward + discounted_rate * V_old[new_row][new_col])
                         if best_Q_sa_and_action == None or Q_sa > best_Q_sa_and_action[0]:
                             best_Q_sa_and_action = (Q_sa, symbol)
 
@@ -251,8 +249,6 @@ class Q2:
                         V_new[row][col] = Q_sa
                         policy_new[row][col] = action
                         sum_of_change += abs(V_new[row][col] - V_old[row][col])
-                    else:
-                        policy_new[row][col] = ' '
 
             V_old = V_new
             policy_old = policy_new
@@ -271,6 +267,90 @@ class Q2:
                 print(f'{policy_old[row][col]}', end=' ')
             print()
 
+    def task_1_policy_iteration(self):
+        rows = len(self.grid)
+        cols = len(self.grid[0]) 
+        
+        actions = [ACTION_UP, ACTION_LEFT, ACTION_RIGHT]
+        
+        intended_action_prob = 0.8
+        iterations = 1000
+        discounted_rate = 0.9
+
+        max_change_threshold = 0.01 # omega
+
+        # Initialize random policy. Doesnt matter.
+        policy = [[0 for _ in range(cols)] for _ in range(rows)]
+        V = [[0 for _ in range(cols)] for _ in range(rows)]
+
+        for iteration in range(iterations):
+            # Policy Evalation
+            while True:
+                max_change = 0
+                for row in range(rows):
+                    for col in range(cols):
+                        policy_old_action = actions[policy[row][col]]
+                        dx, dy, symbol = policy_old_action
+                        new_row, new_col = row + dx, col + dy
+                        if new_row < 0 or new_row >= rows or new_col < 0 or new_col >= cols:
+                            continue
+            
+                        reward = -1 # Dont move
+                        if self.grid[new_row][new_col] == CELL_EMPTY: 
+                            reward = -1
+                        if self.grid[new_row][new_col] == CELL_GOAL: 
+                            reward = 10
+
+                        prev_v = V[row][col]
+                        v = intended_action_prob * (reward + discounted_rate * V[new_row][new_col])
+                        V[row][col] = v
+                        max_change = max(max_change, abs(prev_v - v))
+                if max_change < max_change_threshold:
+                    break
+        
+            # Policy Improvement.
+            is_stable = True
+            for row in range(rows):
+                for col in range(cols):
+                    current_action = policy[row][col]
+
+                    # Find the best action.
+                    best = None
+                    for action_i, action in enumerate(actions):
+                        dx, dy, symbol = action
+                        new_row, new_col = row + dx, col + dy
+                        if new_row < 0 or new_row >= rows or new_col < 0 or new_col >= cols:
+                            continue
+                
+                        reward = -1
+                        if self.grid[new_row][new_col] == CELL_EMPTY: 
+                            reward = -1
+                        if self.grid[new_row][new_col] == CELL_GOAL:
+                            reward = 10
+
+                        Q_sa = intended_action_prob * (reward + discounted_rate * V[new_row][new_col])
+                        if best == None or best[0] < Q_sa:
+                            best = (Q_sa, action_i)
+                            policy[row][col] = action_i
+
+                    assert best != None, "There should be at least 1 valid action."
+                    best_Q_sa, best_action_i = best
+                    if current_action != best_action_i:
+                        is_stable = False
+            if is_stable:
+                print(f'Converged after {iteration} iterations.')
+                break
+        # Show V and Policy
+        for row in range(rows):
+            for col in range(cols):
+                print(f'{V[row][col]:.2f}', end=' ')
+            print()
+
+        for row in range(rows):
+            for col in range(cols):
+                print(f'{actions[policy[row][col]][2]}', end=' ')
+            print()
+
 if __name__ == '__main__':
     q1 = Q1()
     q1.task_1()
@@ -279,3 +359,5 @@ if __name__ == '__main__':
 
     q2 = Q2()
     q2.task_1_value_iteration()
+    q2.task_1_policy_iteration()
+
