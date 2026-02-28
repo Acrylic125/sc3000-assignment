@@ -1,5 +1,6 @@
 import json
 import heapq
+import random
 
 class Q1:
     def __init__(self):
@@ -434,14 +435,125 @@ class Q2:
                     c = "G"
                 print(f'{c}', end=' ')
             print()
+    
+    def task_2_monte_carlo_control(self):
+        rows = len(self.grid)
+        cols = len(self.grid[0]) 
+        
+        actions = ACTIONS
+        episodes = 100000
+        discounted_rate = 0.9
+        intended_action_prob = 0.8
+        unintended_action_prob = 0.1
+        
+        start = (0, 0)
+        # Find the start state.
+        for row in range(rows):
+            for col in range(cols):
+                if self.grid[row][col] == CELL_START:
+                    start = (row, col)
+
+        # Initialize random policy. Doesnt matter.
+        policy = [[random.randint(0, len(actions) - 1) for _ in range(cols)] for _ in range(rows)]
+        # We will use returns to estimate the value of a state.
+        # (State) -> [(Total, Count)] for each action.
+        # NOTE: We will use returns to keep track of total reward and count
+        # to derive the average then update the policy as we go. This is only
+        # a programmatic change, the logic is the same.
+        returns = {}
+        
+        # Epsilon greedy policy.
+        epsilon = 0.1
+        random.seed(42)
+
+        for episode in range(episodes):
+            # Play the episode.
+            # (x, y, Action, Reward)[]
+            episode_state_action_rewards = []
+            cur = start
+            max_steps = rows * cols * 20
+            for _step in range(max_steps):
+                x, y = cur
+                if self.grid[x][y] == CELL_GOAL:
+                    break
+
+                action_i = policy[x][y]
+                if random.random() < epsilon:
+                    # Each action has a e / |A| chance of being chosen.
+                    # Note: The policy action still has a 1 - e + (e / |A|) chance of being chosen.
+                    action_i = random.randint(0, len(actions) - 1)
+
+                _dx, _dy, _symbol = actions[action_i]
+                perp_left_action = actions[(action_i + 1) % len(actions)]
+                perp_right_action = actions[(action_i - 1) % len(actions)]
+
+                r = random.random()
+                if r < intended_action_prob:
+                    dx, dy = _dx, _dy
+                elif r < intended_action_prob + unintended_action_prob:
+                    dx, dy = perp_left_action[0], perp_left_action[1]
+                else:
+                    dx, dy = perp_right_action[0], perp_right_action[1]
+
+                new_x, new_y = x + dx, y + dy
+                if new_x < 0 or new_x >= rows or new_y < 0 or new_y >= cols or self.grid[new_x][new_y] == CELL_BLOCK:
+                    new_x, new_y = x, y
+
+                reward = 10 if self.grid[new_x][new_y] == CELL_GOAL else -1
+                done = self.grid[new_x][new_y] == CELL_GOAL
+                episode_state_action_rewards.append((x, y, action_i, reward))
+                cur = (new_x, new_y)
+                if done:
+                    break
+                
+            # Update the returns for each state-action pair.
+            # Consider only first visit
+            visited = set()
+            Gt = 0
+            for x, y, action_i, reward in reversed(episode_state_action_rewards):
+                state_action_key = (x, y, action_i)
+                # Revisiting the same state-action pair should affect the return.
+                Gt = reward + discounted_rate * Gt
+                if state_action_key in visited:
+                    continue
+                visited.add(state_action_key)
+                state_key = (x, y)
+                if state_key not in returns:
+                    returns[state_key] = [(0.0, 0) for _ in range(len(actions))]
+                total, count = returns[state_key][action_i]
+                returns[state_key][action_i] = (total + Gt, count + 1)
+                
+                # Update policy
+                best = None
+                for action_i in range(len(actions)):
+                    total, count = returns[state_key][action_i]
+                    if count == 0:
+                        continue
+                    value = total / count
+                    if best == None or value > best[0]:
+                        best = (value, action_i)
+                if best != None:
+                    policy[x][y] = best[1]
+    
+        # Show policy
+        for row in range(rows):
+            for col in range(cols):
+                if self.grid[row][col] == CELL_BLOCK:
+                    c = "#"
+                elif self.grid[row][col] == CELL_GOAL:
+                    c = "G"
+                else:
+                    c = actions[policy[row][col]][2]
+                print(f'{c}', end=' ')
+            print()
 
 if __name__ == '__main__':
     q1 = Q1()
-    q1.task_1()
-    q1.task_2()
-    q1.task_3()
+    # q1.task_1()
+    # q1.task_2()
+    # q1.task_3()
 
     q2 = Q2()
-    q2.task_1_value_iteration()
-    q2.task_1_policy_iteration()
-
+    # q2.task_1_value_iteration()
+    # q2.task_1_policy_iteration()
+    q2.task_2_monte_carlo_control()
