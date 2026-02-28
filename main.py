@@ -234,7 +234,7 @@ class Q2:
         iterations = 100
         discounted_rate = 0.9
 
-        stop_max_change = 0.005
+        max_change_threshold = 0.01
 
         V_old = [[0 for _ in range(cols)] for _ in range(rows)]
         policy_old = [[None for _ in range(cols)] for _ in range(rows)]
@@ -292,7 +292,7 @@ class Q2:
 
             V_old = V_new
             policy_old = policy_new
-            if max_change < stop_max_change:
+            if max_change < max_change_threshold:
                 print(f'Converged after {iteration} iterations.')
                 break
 
@@ -317,9 +317,10 @@ class Q2:
         rows = len(self.grid)
         cols = len(self.grid[0]) 
         
-        actions = [ACTION_UP, ACTION_LEFT, ACTION_RIGHT]
+        actions = ACTIONS
         
         intended_action_prob = 0.8
+        unintended_action_prob = 0.1
         iterations = 1000
         discounted_rate = 0.9
 
@@ -335,20 +336,37 @@ class Q2:
                 max_change = 0
                 for row in range(rows):
                     for col in range(cols):
-                        policy_old_action = actions[policy[row][col]]
-                        dx, dy, symbol = policy_old_action
-                        new_row, new_col = row + dx, col + dy
-                        if new_row < 0 or new_row >= rows or new_col < 0 or new_col >= cols:
+                        if self.grid[row][col] == CELL_GOAL or self.grid[row][col] == CELL_BLOCK:
                             continue
-            
-                        reward = -1 # Dont move
-                        if self.grid[new_row][new_col] == CELL_EMPTY: 
+
+                        action_i = policy[row][col]
+                        _dx, _dy, symbol = actions[action_i]
+                        perp_left_action = actions[(action_i + 1) % len(actions)]
+                        perp_right_action = actions[(action_i - 1) % len(actions)]
+                        dirs_to_consider = [
+                            (_dx, _dy, True),
+                            (perp_left_action[0], perp_left_action[1], False),
+                            (perp_right_action[0], perp_right_action[1], False),
+                        ]
+
+                        v = 0
+                        for dx, dy, intended in dirs_to_consider:
+                            new_row, new_col = row + dx, col + dy
+                            if new_row < 0 or new_row >= rows or new_col < 0 or new_col >= cols or self.grid[new_row][new_col] == CELL_BLOCK:
+                                intention_prob = intended_action_prob if intended else unintended_action_prob
+                                v += intention_prob * (-1 + discounted_rate * V[row][col])
+                                continue
+
                             reward = -1
-                        if self.grid[new_row][new_col] == CELL_GOAL: 
-                            reward = 10
+                            if self.grid[new_row][new_col] == CELL_EMPTY:
+                                reward = -1
+                            if self.grid[new_row][new_col] == CELL_GOAL:
+                                reward = 10
+
+                            intention_prob = intended_action_prob if intended else unintended_action_prob
+                            v += intention_prob * (reward + discounted_rate * V[new_row][new_col])
 
                         prev_v = V[row][col]
-                        v = intended_action_prob * (reward + discounted_rate * V[new_row][new_col])
                         V[row][col] = v
                         max_change = max(max_change, abs(prev_v - v))
                 if max_change < max_change_threshold:
@@ -362,19 +380,32 @@ class Q2:
 
                     # Find the best action.
                     best = None
-                    for action_i, action in enumerate(actions):
-                        dx, dy, symbol = action
-                        new_row, new_col = row + dx, col + dy
-                        if new_row < 0 or new_row >= rows or new_col < 0 or new_col >= cols:
-                            continue
-                
-                        reward = -1
-                        if self.grid[new_row][new_col] == CELL_EMPTY: 
-                            reward = -1
-                        if self.grid[new_row][new_col] == CELL_GOAL:
-                            reward = 10
+                    for action_i, (_dx, _dy, symbol) in enumerate(actions):
+                        perp_left_action = actions[(action_i + 1) % len(actions)]
+                        perp_right_action = actions[(action_i - 1) % len(actions)]
+                        dirs_to_consider = [
+                            (_dx, _dy, True),
+                            (perp_left_action[0], perp_left_action[1], False),
+                            (perp_right_action[0], perp_right_action[1], False),
+                        ]
 
-                        Q_sa = intended_action_prob * (reward + discounted_rate * V[new_row][new_col])
+                        Q_sa = 0
+                        for dx, dy, intended in dirs_to_consider:
+                            new_row, new_col = row + dx, col + dy
+                            if new_row < 0 or new_row >= rows or new_col < 0 or new_col >= cols or self.grid[new_row][new_col] == CELL_BLOCK:
+                                intention_prob = intended_action_prob if intended else unintended_action_prob
+                                Q_sa += intention_prob * (-1 + discounted_rate * V[row][col])
+                                continue
+
+                            reward = -1
+                            if self.grid[new_row][new_col] == CELL_EMPTY:
+                                reward = -1
+                            if self.grid[new_row][new_col] == CELL_GOAL:
+                                reward = 10
+
+                            intention_prob = intended_action_prob if intended else unintended_action_prob
+                            Q_sa += intention_prob * (reward + discounted_rate * V[new_row][new_col])
+
                         if best == None or best[0] < Q_sa:
                             best = (Q_sa, action_i)
                             policy[row][col] = action_i
@@ -405,12 +436,12 @@ class Q2:
             print()
 
 if __name__ == '__main__':
-    # q1 = Q1()
-    # q1.task_1()
-    # q1.task_2()
-    # q1.task_3()
+    q1 = Q1()
+    q1.task_1()
+    q1.task_2()
+    q1.task_3()
 
     q2 = Q2()
-    # q2.task_1_value_iteration()
+    q2.task_1_value_iteration()
     q2.task_1_policy_iteration()
 
