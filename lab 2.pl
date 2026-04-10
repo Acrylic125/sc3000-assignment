@@ -10,7 +10,7 @@ smart_phone_tech(galactica_s3).
 stole(stevey, galactica_s3, sumsum).
 boss(stevey, appy).
 
-rival(X, Y) :- competitor(X, Y) ; competitor(Y, X).
+rival(X, Y) :- competitor(X, Y).
 business(T) :- smart_phone_tech(T).
 
 unethical(X) :-
